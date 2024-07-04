@@ -23,7 +23,7 @@ public class UserController {
         try {
             return  ResponseEntity.ok(authenticationService.signup(request));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
 
