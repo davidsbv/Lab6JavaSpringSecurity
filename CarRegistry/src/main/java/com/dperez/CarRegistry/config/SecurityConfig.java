@@ -51,9 +51,9 @@ public class SecurityConfig {
         .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.POST, "/login", "/signup").permitAll()
                 .requestMatchers(HttpMethod.GET, "/cars/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/cars/").hasRole("ROLE_VENDOR")
-                .requestMatchers(HttpMethod.PUT, "/cars/").hasRole("ROLE_VENDOR")
-                .requestMatchers(HttpMethod.DELETE, "/cars/").hasRole("ROLE_VENDOR")
+                .requestMatchers(HttpMethod.POST, "/cars/").hasRole("VENDOR")
+                .requestMatchers(HttpMethod.PUT, "/cars/").hasRole("VENDOR")
+                .requestMatchers(HttpMethod.DELETE, "/cars/").hasRole("VENDOR")
                 .anyRequest().authenticated())
         .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

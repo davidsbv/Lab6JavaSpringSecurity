@@ -6,6 +6,7 @@ import com.dperez.CarRegistry.controller.dtos.SignUpRequest;
 import com.dperez.CarRegistry.repository.RoleRepository;
 import com.dperez.CarRegistry.repository.UserRepository;
 import com.dperez.CarRegistry.repository.entity.RoleEntity;
+import com.dperez.CarRegistry.repository.entity.RoleName;
 import com.dperez.CarRegistry.repository.entity.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
@@ -25,11 +26,11 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    private static final String DEFAUL_ROLE = "ROLE_USER"; // Rol por defecto
+    private static final RoleName DEFAULT_ROLE = RoleName.ROLE_CLIENT; // Rol por defecto
 
     public LoginResponse signup(SignUpRequest request) throws BadRequestException {
         // Buscar rol por defecto en la base de datos
-        RoleEntity defaultRole = roleRepository.findByName(DEFAUL_ROLE)
+        RoleEntity defaultRole = roleRepository.findByName(DEFAULT_ROLE)
                 .orElseThrow(() -> new BadRequestException("Default role not found"));
 
         // Construir el objeto UserEntity con el rol asignado

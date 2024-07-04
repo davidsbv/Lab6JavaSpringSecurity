@@ -32,12 +32,12 @@ public class UserEntity implements UserDetails {
     private String password;
 
     @ManyToOne
-    @JoinColumn(name = "role_id", nullable = false)
+    @JoinColumn(name = "role_name", referencedColumnName = "name", nullable = false)
     private RoleEntity role; // Ejemplo: ROLE_CLIENT, ROLE_VENDOR
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.toString()));
+        return List.of(new SimpleGrantedAuthority(role.getName().name()));
     }
 
     @Override
