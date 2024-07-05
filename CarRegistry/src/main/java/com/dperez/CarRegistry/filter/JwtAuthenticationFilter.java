@@ -38,31 +38,68 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt;
         final String userEmail;
 
-        if (StringUtils.isEmpty(authHeader)){
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.warn("No Authorization header or header does not start with Bearer");
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring((7)); // Bearer xxxx
-        log.info("JWT -> {}", jwt.toString());
+        jwt = authHeader.substring(7); // Remove "Bearer " prefix
+        log.info("JWT -> {}", jwt);
 
-        userEmail = jwtService.extractUserName(jwt);
-        if(!StringUtils.isEmpty(userEmail) && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userService.userDetailsService().loadUserByUsername(userEmail);
-            if(jwtService.isTokenValid(jwt, userDetails)){
-                log.info("User -> {}", userDetails);
-                SecurityContext context = SecurityContextHolder.createEmptyContext();
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                context.setAuthentication(authToken);
-                SecurityContextHolder.setContext(context);
+        try {
+            userEmail = jwtService.extractUserName(jwt);
+            log.info("Extracted user email -> {}", userEmail);
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userService.userDetailsService().loadUserByUsername(userEmail);
+                log.info("Loaded user details -> {}", userDetails);
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    log.info("Token is valid");
+                    log.info("User -> {}", userDetails);
+                    log.info("Authorities -> {}", userDetails.getAuthorities());
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    log.warn("Token is not valid");
+                }
             }
+        } catch (Exception e) {
+            log.error("Error validating token", e);
         }
+
         filterChain.doFilter(request, response);
+    }
+//        ***************************************************************************
+
+//        if (StringUtils.isEmpty(authHeader)){
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
+//
+//        jwt = authHeader.substring((7)); // Bearer xxxx
+//        log.info("JWT -> {}", jwt.toString());
+//
+//        userEmail = jwtService.extractUserName(jwt);
+//        if(!StringUtils.isEmpty(userEmail) && SecurityContextHolder.getContext().getAuthentication() == null) {
+//            UserDetails userDetails = userService.userDetailsService().loadUserByUsername(userEmail);
+//            if(jwtService.isTokenValid(jwt, userDetails)){
+//                log.info("User -> {}", userDetails);
+//                log.info("Authorities -> {}", userDetails.getAuthorities());
+//                SecurityContext context = SecurityContextHolder.createEmptyContext();
+//                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+//                        userDetails, null, userDetails.getAuthorities());
+//                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+//                context.setAuthentication(authToken);
+//                SecurityContextHolder.setContext(context);
+//            }
+//        }
+//        filterChain.doFilter(request, response);
 
     }
 
 
 
-}
+

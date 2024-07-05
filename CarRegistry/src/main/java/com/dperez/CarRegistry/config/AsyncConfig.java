@@ -3,6 +3,9 @@ package com.dperez.CarRegistry.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutor;
+import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecutor;
+import org.springframework.security.task.DelegatingSecurityContextTaskExecutor;
 
 import java.util.concurrent.Executor;
 
@@ -17,6 +20,6 @@ public class AsyncConfig {
         executor.setQueueCapacity(500); // Capacidad de la cola de tareas
         executor.setThreadNamePrefix("CarRegistryThread-"); // Prefijo de los nombres de los hilos
         executor.initialize();
-        return executor;
+        return new DelegatingSecurityContextExecutor(executor);
     }
 }

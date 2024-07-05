@@ -18,7 +18,7 @@ public class UserController {
 
     private final AuthenticationService authenticationService;
 
-    @PostMapping("/signup")
+    @PostMapping("signup")
     public ResponseEntity<?> signup(@RequestBody SignUpRequest request){
         try {
             return  ResponseEntity.ok(authenticationService.signup(request));
@@ -27,7 +27,7 @@ public class UserController {
         }
     }
 
-    @PostMapping("/login")
+    @PostMapping("login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request){
         return ResponseEntity.ok(authenticationService.login(request));
     }

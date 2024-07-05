@@ -49,11 +49,11 @@ public class SecurityConfig {
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(HttpMethod.POST, "/login", "/signup").permitAll()
-                .requestMatchers(HttpMethod.GET, "/cars/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/cars/").hasRole("VENDOR")
-                .requestMatchers(HttpMethod.PUT, "/cars/").hasRole("VENDOR")
-                .requestMatchers(HttpMethod.DELETE, "/cars/").hasRole("VENDOR")
+                .requestMatchers(HttpMethod.POST, "/users/**", "/login", "/signup").permitAll()
+                .requestMatchers(HttpMethod.GET, "/cars/**").hasRole("CLIENT")
+                .requestMatchers(HttpMethod.POST, "/cars/**", "/cars/add-bunch").hasRole("VENDOR")
+                .requestMatchers(HttpMethod.PUT, "/cars/**").hasRole("VENDOR")
+                .requestMatchers(HttpMethod.DELETE, "/cars/**").hasRole("VENDOR")
                 .anyRequest().authenticated())
         .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

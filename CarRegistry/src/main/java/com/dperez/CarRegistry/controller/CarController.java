@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class CarController {
     private CarService carService;
 
     @PostMapping("add-car")
+    @PreAuthorize("hasRole('VENDOR')")
     public ResponseEntity<?> addCar(@RequestBody CarDTO carDTO){
 
         try {
@@ -49,6 +51,7 @@ public class CarController {
 
     // Añadir lista de coches
     @PostMapping("add-bunch")
+    @PreAuthorize("hasRole('VENDOR')")
     public CompletableFuture<ResponseEntity<?>> addBunchCars(@RequestBody List<CarDTO> carDTOs){
 
         try {
@@ -74,6 +77,7 @@ public class CarController {
     }
 
     @GetMapping("get-car/{id}")
+    @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<?> getCarById(@PathVariable Integer id){
 
         // Se busca la id solicitada. Si existe se devuelve la información del coche y la marca.
@@ -91,7 +95,8 @@ public class CarController {
     }
 
     @PutMapping("update-car/{id}")
-        public ResponseEntity<?> updateCarById(@PathVariable Integer id, @RequestBody CarDTO carDto){
+    @PreAuthorize("hasRole('VENDOR')")
+    public ResponseEntity<?> updateCarById(@PathVariable Integer id, @RequestBody CarDTO carDto){
 
         try {
             // Mapear carDTO a Car y llamada al método updateCarById
@@ -116,7 +121,8 @@ public class CarController {
 
     // Actualizar lista de coches
     @PutMapping("update-bunch")
-        public CompletableFuture<ResponseEntity<?>> updateBunch(@RequestBody List<CarDTO> carDTOs){
+    @PreAuthorize("hasRole('VENDOR')")
+    public CompletableFuture<ResponseEntity<?>> updateBunch(@RequestBody List<CarDTO> carDTOs){
 
         try {
             List<Car> cars = carDTOs.stream().map(CarDTOMapper.INSTANCE::carDTOToCar).toList();
@@ -138,6 +144,7 @@ public class CarController {
     }
 
     @DeleteMapping("delete-car/{id}")
+    @PreAuthorize("hasRole('VENDOR')")
     public ResponseEntity<?> deleteCarById(@PathVariable Integer id){
 
         try {
@@ -155,6 +162,7 @@ public class CarController {
 
     // Recuperar la información de todos los coches
     @GetMapping("get-all")
+    @PreAuthorize("hasRole('CLIENT')")
     public CompletableFuture<ResponseEntity<?>> getAllCars(){
 
         // Mapea la lista con objetos Car a una lista con objetos carDTOAndBrand y muestra su resultado.
