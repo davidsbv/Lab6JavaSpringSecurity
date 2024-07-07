@@ -11,7 +11,6 @@ public interface CarService {
 
     Car addCar(Car car) throws DataIntegrityViolationException;
     CompletableFuture<List<Car>> addBunchCars(List<Car> cars);
-    List<Car> addBunchCarsV2(List<Car> cars);
     Car getCarById(Integer id);
     Car updateCarById(Integer id, Car car);
     CompletableFuture<List<Car>> updateBunchCars(List<Car> cars);

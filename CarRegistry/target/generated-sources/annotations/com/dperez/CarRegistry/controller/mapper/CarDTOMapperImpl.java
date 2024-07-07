@@ -1,15 +1,20 @@
 package com.dperez.CarRegistry.controller.mapper;
 
 import com.dperez.CarRegistry.controller.dtos.CarDTO;
+import com.dperez.CarRegistry.controller.dtos.CarDTO.CarDTOBuilder;
 import com.dperez.CarRegistry.service.model.Brand;
+import com.dperez.CarRegistry.service.model.Brand.BrandBuilder;
 import com.dperez.CarRegistry.service.model.Car;
+import com.dperez.CarRegistry.service.model.Car.CarBuilder;
 import javax.annotation.processing.Generated;
+import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2024-07-04T17:18:31+0200",
+    date = "2024-07-07T18:44:02+0200",
     comments = "version: 1.4.2.Final, compiler: javac, environment: Java 17.0.8 (Oracle Corporation)"
 )
+@Component
 public class CarDTOMapperImpl implements CarDTOMapper {
 
     @Override
@@ -18,20 +23,20 @@ public class CarDTOMapperImpl implements CarDTOMapper {
             return null;
         }
 
-        CarDTO carDTO = new CarDTO();
+        CarDTOBuilder carDTO = CarDTO.builder();
 
-        carDTO.setBrand( carBrandName( car ) );
-        carDTO.setId( car.getId() );
-        carDTO.setModel( car.getModel() );
-        carDTO.setMileage( car.getMileage() );
-        carDTO.setPrice( car.getPrice() );
-        carDTO.setYear( car.getYear() );
-        carDTO.setDescription( car.getDescription() );
-        carDTO.setColor( car.getColor() );
-        carDTO.setFuelType( car.getFuelType() );
-        carDTO.setNumDoors( car.getNumDoors() );
+        carDTO.brand( carBrandName( car ) );
+        carDTO.id( car.getId() );
+        carDTO.model( car.getModel() );
+        carDTO.mileage( car.getMileage() );
+        carDTO.price( car.getPrice() );
+        carDTO.year( car.getYear() );
+        carDTO.description( car.getDescription() );
+        carDTO.color( car.getColor() );
+        carDTO.fuelType( car.getFuelType() );
+        carDTO.numDoors( car.getNumDoors() );
 
-        return carDTO;
+        return carDTO.build();
     }
 
     @Override
@@ -40,20 +45,20 @@ public class CarDTOMapperImpl implements CarDTOMapper {
             return null;
         }
 
-        Car car = new Car();
+        CarBuilder car = Car.builder();
 
-        car.setBrand( carDTOToBrand( carDTO ) );
-        car.setId( carDTO.getId() );
-        car.setModel( carDTO.getModel() );
-        car.setMileage( carDTO.getMileage() );
-        car.setPrice( carDTO.getPrice() );
-        car.setYear( carDTO.getYear() );
-        car.setDescription( carDTO.getDescription() );
-        car.setColor( carDTO.getColor() );
-        car.setFuelType( carDTO.getFuelType() );
-        car.setNumDoors( carDTO.getNumDoors() );
+        car.brand( carDTOToBrand( carDTO ) );
+        car.id( carDTO.getId() );
+        car.model( carDTO.getModel() );
+        car.mileage( carDTO.getMileage() );
+        car.price( carDTO.getPrice() );
+        car.year( carDTO.getYear() );
+        car.description( carDTO.getDescription() );
+        car.color( carDTO.getColor() );
+        car.fuelType( carDTO.getFuelType() );
+        car.numDoors( carDTO.getNumDoors() );
 
-        return car;
+        return car.build();
     }
 
     private String carBrandName(Car car) {
@@ -76,10 +81,10 @@ public class CarDTOMapperImpl implements CarDTOMapper {
             return null;
         }
 
-        Brand brand = new Brand();
+        BrandBuilder brand = Brand.builder();
 
-        brand.setName( carDTO.getBrand() );
+        brand.name( carDTO.getBrand() );
 
-        return brand;
+        return brand.build();
     }
 }

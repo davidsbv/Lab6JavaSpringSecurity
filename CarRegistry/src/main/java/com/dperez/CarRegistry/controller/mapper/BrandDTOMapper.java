@@ -5,7 +5,7 @@ import com.dperez.CarRegistry.service.model.Brand;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface BrandDTOMapper {
 
     BrandDTOMapper INSTANCE = Mappers.getMapper(BrandDTOMapper.class);

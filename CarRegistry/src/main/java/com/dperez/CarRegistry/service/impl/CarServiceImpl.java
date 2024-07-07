@@ -11,7 +11,13 @@ import com.dperez.CarRegistry.service.model.Brand;
 import com.dperez.CarRegistry.service.model.Car;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutor;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,6 +26,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,6 +42,7 @@ import java.util.stream.Collectors;
 
     @Autowired
     private CarEntityMapper carEntityMapper;
+
 
     @Override
     public Car addCar(Car car) throws IllegalArgumentException {
@@ -68,82 +77,51 @@ import java.util.stream.Collectors;
         // Se devuelve el coche guardado como modelo de dominio
         return CarEntityMapper.INSTANCE.carEntityToCar(savedCarEntity);
     }
-    @Async
-    @Override
-    public List<Car> addBunchCarsV2(List<Car> cars) {
-            long startTime = System.currentTimeMillis();
-
-        // Obtener la lista de marcas antes de entrar al bucle
-        List<BrandEntity> brandList = brandRepository.findAll();
-        Map<String, BrandEntity> brandMap = brandList.stream()
-                .collect(Collectors.toMap(brand -> brand.getName().toLowerCase(), brand -> brand));
-
-        // Obrener todos los coches
-        List<CarEntity> carsInDB = carRepository.findAll();
-
-
-        // Verificar si la lista está vacía con brandList.size() o Objects.isEmpty() y lanzar error
-        if (brandList.isEmpty()){
-            throw new IllegalArgumentException("No brands found");
-        }
-        List<CarEntity> carEntitiesToAdd = cars.stream().map(car -> {
-            // Comprobar si la id ya existe
-            if ((car.getId() != null) && carsInDB.stream()
-                    .map(CarEntity::getId).collect(Collectors.toSet()).contains(car.getId())) {
-                throw new IllegalArgumentException("The id" + car.getId() + " already exists.");
-            }
-            BrandEntity brandEntity = brandMap.get(car.getBrand().getName().toLowerCase());
-            if (brandEntity == null) {
-                throw new IllegalArgumentException("Brand " + car.getBrand().getName() + " does not exist");
-            }
-            // Convertir a carEntity y asignar la marca
-            CarEntity carEntityToSave = carEntityMapper.carToCarEntity(car);
-            carEntityToSave.setBrand(brandEntity);
-            return carEntityToSave;
-        }).toList();
-        // Se guardan los coches en una sola oparación
-        List<CarEntity> savedCarEntities = carRepository.saveAll(carEntitiesToAdd);
-
-        // Se pasan los carEntity a Car y se devuelven
-//        Licst<CarEntity> carEntitiesToSave = carsToAdd.stream().map(carEntityMapper::carToCarEntity).toList();
-       List<Car> savedCars = savedCarEntities.stream().map(carEntity -> carEntityMapper.carEntityToCar(carEntity)).toList();
-        return (List<Car>) CompletableFuture.completedFuture(savedCars);
-    }
 
     @Async("taskExecutor")
     @Override
     public CompletableFuture<List<Car>> addBunchCars(List<Car> cars) throws IllegalArgumentException {
         long starTime = System.currentTimeMillis();
+        // Captura el contexto de seguridad actual
+        SecurityContext securityContext = SecurityContextHolder.getContext();
 
-        // Verificar si la id existe y si la marca está en la base de datos
-        List<Car> addedCars = cars.stream().map(car -> {
-            if ((car.getId() != null) && carRepository.existsById(car.getId())){
-               throw new IllegalArgumentException("The Id " + car.getId() + " already exists");
-            }
-            // Se obtienen las marcas de los coches a actualizar
-            Optional<BrandEntity> brandEntityOptional = brandRepository.findByNameIgnoreCase(car.getBrand().getName());
+        try {
+            // Verificar si la id existe y si la marca está en la base de datos
+            List<Car> addedCars = cars.stream().map(car -> {
+                if ((car.getId() != null) && carRepository.existsById(car.getId())){
+                    throw new IllegalArgumentException("The Id " + car.getId() + " already exists");
+                }
+                // Se obtienen las marcas de los coches a actualizar
+                Optional<BrandEntity> brandEntityOptional = brandRepository.findByNameIgnoreCase(car.getBrand().getName());
 
-            if (brandEntityOptional.isEmpty()){
-                throw new IllegalArgumentException("Brand " + car.getBrand().getName() + " does not exist");
-            }
+                if (brandEntityOptional.isEmpty()){
+                    throw new IllegalArgumentException("Brand " + car.getBrand().getName() + " does not exist");
+                }
 
-            // Toma la BrandEntity, se le asigna a cada CarEntity que se ha transformado previamente de Car
-            BrandEntity brandEntity = brandEntityOptional.get();
-            CarEntity carEntity = CarEntityMapper.INSTANCE.carToCarEntity(car);
-            carEntity.setBrand(brandEntity);
+                // Toma la BrandEntity, se le asigna a cada CarEntity que se ha transformado previamente de Car
+                BrandEntity brandEntity = brandEntityOptional.get();
+                CarEntity carEntity = CarEntityMapper.INSTANCE.carToCarEntity(car);
+                carEntity.setBrand(brandEntity);
 
-            // Se guarda el CarEntity con los datos validados, en savedCar para retornarlos al stream como Car
-            CarEntity savedCarEntity = carRepository.save(carEntity);
+                // Se guarda el CarEntity con los datos validados, en savedCar para retornarlos al stream como Car
+                CarEntity savedCarEntity = carRepository.save(carEntity);
 
-            return CarEntityMapper.INSTANCE.carEntityToCar(savedCarEntity);
-        }).toList();
+                return CarEntityMapper.INSTANCE.carEntityToCar(savedCarEntity);
+            }).toList();
 
-        long endTime = System.currentTimeMillis();
-        log.info("Total time: " + (endTime-starTime) + "ms");
+            long endTime = System.currentTimeMillis();
+            log.info("Total time: " + (endTime-starTime) + "ms");
 
-        // Se devulven los coches guardados
-        return CompletableFuture.completedFuture(addedCars);
+            // Se devulven los coches guardados
+            return CompletableFuture.completedFuture(addedCars);
+        } catch (Exception e) {
+            log.error("Error adding several cars");
+            throw new RuntimeException(e);
+        } finally {
+            SecurityContextHolder.setContext(securityContext);
+        }
     }
+
 
 
     @Override
@@ -247,9 +225,12 @@ import java.util.stream.Collectors;
         }
     }
 
+
     @Async("taskExecutor")
     @Override
     public CompletableFuture<List<Car>> getAllCars() {
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        log.info("SecurityContext antes: ->{} ",  securityContext.toString());
         long starTime = System.currentTimeMillis();
 
         // Se obtienen en una lista todos los objetos de tipo CarEntity y se mapean a tipo Car
@@ -262,7 +243,9 @@ import java.util.stream.Collectors;
         long endTime = System.currentTimeMillis();
         log.info("Total time: " + (endTime-starTime) + "ms");
 
+        log.info("SecurityContext después: ->{} ",  securityContext.toString());
         // Se devuelve el resultado
         return CompletableFuture.completedFuture(allCars);
     }
+
 }
