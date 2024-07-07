@@ -38,31 +38,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt;
         final String userEmail;
 
-        if (StringUtils.isEmpty(authHeader)){
+
+
+        if (StringUtils.isEmpty(authHeader)) {
+            log.error("Header error");
+            log.error("authHeader -> {}",authHeader);
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring((7)); // Bearer xxxx
-        log.info("JWT -> {}", jwt.toString());
+        jwt = authHeader.substring(7); // Bearer xxxx
+        log.info("JWT -> {}", jwt);
 
         userEmail = jwtService.extractUserName(jwt);
-        if(!StringUtils.isEmpty(userEmail) && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+        // Verificar si el nombre de usuario no es nulo y si el contexto de seguridad no tiene autenticación configurada
+        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userService.userDetailsService().loadUserByUsername(userEmail);
-            if(jwtService.isTokenValid(jwt, userDetails)){
-                log.info("User -> {}", userDetails);
-                SecurityContext context = SecurityContextHolder.createEmptyContext();
+
+            // Verificar si el token JWT es válido
+            if (jwtService.isTokenValid(jwt, userDetails)) {
+                // Crear un objeto UsernamePasswordAuthenticationToken con los detalles del usuario
+                // y configurarlo en el contexto de seguridad
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
+
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                context.setAuthentication(authToken);
-                SecurityContextHolder.setContext(context);
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                log.debug("User authenticated: " + userDetails.getUsername());
+            } else {
+                log.warn("Invalid JWT token");
             }
         }
+        // Continuar con el siguiente filtro en la cadena
         filterChain.doFilter(request, response);
-
     }
-
-
 
 }

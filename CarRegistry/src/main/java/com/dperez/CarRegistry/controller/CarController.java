@@ -10,11 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.concurrent.ExecutionException;
 
 @Slf4j
 @RestController
@@ -24,7 +25,14 @@ public class CarController {
     @Autowired
     private CarService carService;
 
+    @Autowired
+    private CarDTOMapper carDTOMapper;
+
+    @Autowired
+    private CarDTOAndBrandMapper carDTOAndBrandMapper;
+
     @PostMapping("add-car")
+    @PreAuthorize("hasRole('VENDOR')")
     public ResponseEntity<?> addCar(@RequestBody CarDTO carDTO){
 
         try {
@@ -32,7 +40,7 @@ public class CarController {
             // Cuando se guarda se devuelve en newCarDTO  y se muestra la respuesta
             Car car = CarDTOMapper.INSTANCE.carDTOToCar(carDTO);
             Car newCar = carService.addCar(car);
-            CarDTOAndBrand newCarDTOAndBrand = CarDTOAndBrandMapper.INSTANCE.carToCarDTOAndBrand(newCar);
+            CarDTOAndBrand newCarDTOAndBrand = carDTOAndBrandMapper.INSTANCE.carToCarDTOAndBrand(newCar);
             log.info("New Car added");
             return ResponseEntity.ok(newCarDTOAndBrand);
 
@@ -48,32 +56,36 @@ public class CarController {
     }
 
     // Añadir lista de coches
-    @PostMapping("add-bunch")
-    public CompletableFuture<ResponseEntity<?>> addBunchCars(@RequestBody List<CarDTO> carDTOs){
+    @PostMapping("/add-bunch")
+    @PreAuthorize("hasRole('VENDOR')")
+    public ResponseEntity<List<CarDTOAndBrand>> addBunchCars(@RequestBody List<CarDTO> carDTOs){
+
+        // Mapear los carDTOs a Car
+        List<Car> carsToAdd = carDTOs.stream().map(carDTOMapper.INSTANCE::carDTOToCar).toList();
+
+        // LLamada al servicio asíncrono
+        CompletableFuture<List<Car>> futrureCars = carService.addBunchCars(carsToAdd);
 
         try {
-            // Convierte la lista de CarDTO a Car y llama al método addCars del servicio
-            // Después pasa cada objeto car del stream un objeto CarDTOAndBrand y lo devuelve
-            List<Car> cars = carDTOs.stream().map(CarDTOMapper.INSTANCE::carDTOToCar).collect(Collectors.toList());
-            return carService.addBunchCars(cars).thenApply(addedCars -> {
-                List<CarDTOAndBrand> addedCarDTOsAndBrand = addedCars.stream()
-                        .map(CarDTOAndBrandMapper.INSTANCE::carToCarDTOAndBrand).toList();
+            // Espera a que acabe el método asíncrono
+            List<Car> addedCars = futrureCars.get();
+            List<CarDTOAndBrand> carsDTOAndBrand = addedCars.stream()
+                    .map(carDTOAndBrandMapper.INSTANCE::carToCarDTOAndBrand).toList();
+            return ResponseEntity.ok(carsDTOAndBrand);
 
-                log.info("Adding several cars");
-                return ResponseEntity.ok(addedCarDTOsAndBrand);
-            });
-        }  catch (IllegalArgumentException e) {
-            // Error en la id o marca
+        } catch (IllegalArgumentException e){
             log.error(e.getMessage());
-            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage()));
+            return ResponseEntity.badRequest().build();
 
-        } catch (Exception e){
-            log.error("Error while adding new car");
-            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
+        } catch (InterruptedException | ExecutionException e) {
+            log.error(e.getMessage());
+            return ResponseEntity.internalServerError().build();
         }
     }
 
+    // Obtener información de un coche por id
     @GetMapping("get-car/{id}")
+    @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<?> getCarById(@PathVariable Integer id){
 
         // Se busca la id solicitada. Si existe se devuelve la información del coche y la marca.
@@ -81,7 +93,7 @@ public class CarController {
         Car car = carService.getCarById(id);
         if (car != null){
             log.info("Car info loaded");
-            CarDTOAndBrand carDTOAndBrand = CarDTOAndBrandMapper.INSTANCE.carToCarDTOAndBrand(car);
+            CarDTOAndBrand carDTOAndBrand = carDTOAndBrandMapper.INSTANCE.carToCarDTOAndBrand(car);
             return ResponseEntity.ok(carDTOAndBrand);
         }
         else {
@@ -90,7 +102,9 @@ public class CarController {
         }
     }
 
+    // Actualizar un coche
     @PutMapping("update-car/{id}")
+    @PreAuthorize("hasRole('VENDOR')")
         public ResponseEntity<?> updateCarById(@PathVariable Integer id, @RequestBody CarDTO carDto){
 
         try {
@@ -99,7 +113,7 @@ public class CarController {
             Car carToUpdate = carService.updateCarById(id, car);
 
             // Mapear Car a CarDTO y devolver CarDTO actualizado
-            CarDTOAndBrand carUpdated = CarDTOAndBrandMapper.INSTANCE.carToCarDTOAndBrand(carToUpdate);
+            CarDTOAndBrand carUpdated = carDTOAndBrandMapper.INSTANCE.carToCarDTOAndBrand(carToUpdate);
             log.info("Car updated");
             return ResponseEntity.ok(carUpdated);
 
@@ -116,28 +130,40 @@ public class CarController {
 
     // Actualizar lista de coches
     @PutMapping("update-bunch")
-        public CompletableFuture<ResponseEntity<?>> updateBunch(@RequestBody List<CarDTO> carDTOs){
+    @PreAuthorize("hasRole('VENDOR')")
+        public ResponseEntity<List<CarDTOAndBrand>> updateBunch(@RequestBody List<CarDTO> carDTOs){
+
+        // Mapeo de carDTOs a Car
+        List<Car> cars = carDTOs.stream().map(carDTOMapper.INSTANCE::carDTOToCar).toList();
+
+        // Llamada al método asíncrono
+        CompletableFuture<List<Car>> futureCars = carService.updateBunchCars(cars);
 
         try {
-            List<Car> cars = carDTOs.stream().map(CarDTOMapper.INSTANCE::carDTOToCar).toList();
-            return carService.updateBunchCars(cars).thenApply(updatedCars -> {
-                List<CarDTOAndBrand> updatedCarDTOAndBrand = updatedCars.stream()
-                        .map(CarDTOAndBrandMapper.INSTANCE::carToCarDTOAndBrand).toList();
+            // Espera hasta tener el resultado
+            List<Car> updatedCars = futureCars.get();
 
-                log.info("Updating several cars");
-                return ResponseEntity.ok(updatedCarDTOAndBrand);
-            });
-        }catch (IllegalArgumentException e) {
-            log.error(e.getMessage());
-            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage()));
+            // Mapeo del resultado
+            List<CarDTOAndBrand> updatedCarDTOsAndBrand = updatedCars.stream()
+                    .map(carDTOAndBrandMapper.INSTANCE::carToCarDTOAndBrand).toList();
 
-        } catch (Exception e){
-            log.error("Error while updating car");
-            return CompletableFuture.completedFuture(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
+            log.info("Updating several cars");
+
+            // Retorno del resultado de la actualización
+            return ResponseEntity.ok(updatedCarDTOsAndBrand);
+
+        } catch (IllegalArgumentException e) {
+            log.error("Error updating cars");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
+    // Borrar un coche por id
     @DeleteMapping("delete-car/{id}")
+    @PreAuthorize("hasRole('VENDOR')")
     public ResponseEntity<?> deleteCarById(@PathVariable Integer id){
 
         try {
@@ -155,16 +181,24 @@ public class CarController {
 
     // Recuperar la información de todos los coches
     @GetMapping("get-all")
-    public CompletableFuture<ResponseEntity<?>> getAllCars(){
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<List<CarDTOAndBrand>> getAllCars(){
 
         // Mapea la lista con objetos Car a una lista con objetos carDTOAndBrand y muestra su resultado.
-        CompletableFuture<List<Car>> cars =  carService.getAllCars();
-        return cars.thenApply(carRecovered -> {
-            List<CarDTOAndBrand> carDTOsAndBrand = carRecovered.stream()
-                .map(CarDTOAndBrandMapper.INSTANCE::carToCarDTOAndBrand).toList();
+        // Bloquea hasta que la llamada asincrónica se complete
+        try {
+            List<Car> carRecovered =  carService.getAllCars().get();
 
-            log.info("Rcovering all cars");
+            // Mapea la lista con objetos Car a una lista con objetos CarDTOAndBrand
+            List<CarDTOAndBrand> carDTOsAndBrand = carRecovered.stream()
+                        .map(carDTOAndBrandMapper.INSTANCE::carToCarDTOAndBrand).toList();
+
+            // Devuelve la respuesta con la lista de CarDTOAndBrand
             return ResponseEntity.ok(carDTOsAndBrand);
-        });
+        } catch (InterruptedException | ExecutionException e) {
+            return  ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
+
     }
 }

@@ -6,11 +6,12 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 
+
 @EnableAsync
 public class AsyncConfig {
 
     @Bean(name = "taskExecutor")
-    public Executor taskExecutor(){
+    public Executor taskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(5); // Número mínimo de hilos concurrentes
         executor.setMaxPoolSize(10); // Número máximo de hilos
@@ -20,3 +21,9 @@ public class AsyncConfig {
         return executor;
     }
 }
+
+
+
+
+
+

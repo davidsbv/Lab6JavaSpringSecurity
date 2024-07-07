@@ -15,6 +15,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -38,24 +40,31 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    // TODO: Añadido en la última prueba con TaskExecutor
+//    @Bean
+//    public SecurityContextHolderStrategy securityContextHolderStrategy() {
+//        SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
+//        return SecurityContextHolder.getContextHolderStrategy();
+//    }
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception{
         return  config.getAuthenticationManager();
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain (HttpSecurity http) throws Exception{
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-        .csrf(AbstractHttpConfigurer::disable)
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(HttpMethod.POST, "/login", "/signup").permitAll()
-                .requestMatchers(HttpMethod.GET, "/cars/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/cars/").hasRole("VENDOR")
-                .requestMatchers(HttpMethod.PUT, "/cars/").hasRole("VENDOR")
-                .requestMatchers(HttpMethod.DELETE, "/cars/").hasRole("VENDOR")
-                .anyRequest().authenticated())
-        .authenticationProvider(authenticationProvider())
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.POST, "/users/**", "/login", "/signup").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/cars/**", "/cars/add-bunch").hasRole("VENDOR")
+                        .requestMatchers(HttpMethod.GET, "/cars/**","/cars/get-all").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.PUT, "/cars/**").hasRole("VENDOR")
+                        .requestMatchers(HttpMethod.DELETE, "/cars/**").hasRole("VENDOR")
+                        .anyRequest().authenticated())
+                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
