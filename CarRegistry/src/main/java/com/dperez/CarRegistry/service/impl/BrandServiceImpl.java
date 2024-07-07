@@ -82,6 +82,7 @@ public class BrandServiceImpl implements BrandService {
     @Async("taskExecutor")
     @Override
     public CompletableFuture<List<Brand>> getAllBrands() {
+
         List<Brand> allBrands = brandRepository.findAll()
                 .stream().map(BrandEntityMapper.INSTANCE::brandEntityToBrand).toList();
         return CompletableFuture.completedFuture(allBrands);
