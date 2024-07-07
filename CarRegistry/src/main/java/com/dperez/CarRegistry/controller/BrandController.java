@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Slf4j
 @RestController
@@ -20,6 +21,9 @@ public class BrandController {
 
     @Autowired
     private BrandService brandService;
+
+    @Autowired
+    private BrandDTOMapper brandDTOMapper;
 
     @PostMapping("add")
     public ResponseEntity<?> addBrand(@RequestBody BrandDTO brandDTO){
@@ -86,17 +90,33 @@ public class BrandController {
     }
 
     @GetMapping("get-all")
-    public CompletableFuture<ResponseEntity<?>> getAllBrands(){
+    public ResponseEntity<List<BrandDTO>> getAllBrands(){
+
+        // Recuperar las marcas
         CompletableFuture<List<Brand>> allBrands = brandService.getAllBrands();
 
-        return allBrands.thenApply(brands -> {
-             brands.stream().map(BrandDTOMapper.INSTANCE::brandToBrandDTO).toList();
-             // En caso de querer conservar el valor de la lista mapeada podemos utilizar las dos líneas comentadas
-//            List<BrandDTO> brandDTOS = brands.stream()
-//                    .map(BrandDTOMapper.INSTANCE::brandToBrandDTO).toList();
-            log.info("Recovering all Brands");
-            return ResponseEntity.status(HttpStatus.OK).body(brands);
-        });
+        try {
+            // Esperar a que se complete el método asíncrono (Blocking)
+            List<Brand> recoveredBrands = allBrands.get();
+
+           // Mapeo de Brand a BrandDTO
+            List<BrandDTO> allBrandDTOs = recoveredBrands.stream()
+                    .map(brandDTOMapper.INSTANCE::brandToBrandDTO).toList();
+
+            return ResponseEntity.ok(allBrandDTOs);
+
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+        // CODIGO CUANDO SE DEVUELVE UN CompletableFuture
+//        return allBrands.thenApply(brands -> {
+//             brands.stream().map(BrandDTOMapper.INSTANCE::brandToBrandDTO).toList();
+//             // En caso de querer conservar el valor de la lista mapeada podemos utilizar las dos líneas comentadas
+////            List<BrandDTO> brandDTOS = brands.stream()
+////                    .map(BrandDTOMapper.INSTANCE::brandToBrandDTO).toList();
+//            log.info("Recovering all Brands");
+//            return ResponseEntity.status(HttpStatus.OK).body(brands);
+//        });
 
     }
 
